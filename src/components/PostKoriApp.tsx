@@ -8,7 +8,18 @@ import DetailsForm from "./DetailsForm";
 import OptionPicker, { type Option } from "./OptionPicker";
 import ResultCard, { copyText } from "./ResultCard";
 import ShopProfileCard from "./ShopProfile";
+import PostHistory from "./PostHistory";
 import { compressImage } from "@/lib/compressImage";
+import {
+  addToHistory,
+  clearHistory,
+  loadHistory,
+  makeThumbnail,
+  newId,
+  postToText,
+  removeFromHistory,
+  type HistoryItem,
+} from "@/lib/history";
 import {
   clearShopProfile,
   deliveryText,
@@ -57,11 +68,15 @@ export default function PostKoriApp() {
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
   const [shop, setShop] = useState<ShopProfile>(emptyShopProfile);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [viewingOld, setViewingOld] = useState(false); // true when showing a post opened from history
 
   // Load the saved shop profile from this browser (once, after the page opens)
   useEffect(() => {
     const saved = loadShopProfile();
     setShop(saved);
+    setHistory(loadHistory());
     const delivery = deliveryText(saved);
     if (delivery) setDetails((d) => (d.deliveryCharge ? d : { ...d, deliveryCharge: delivery }));
   }, []);
@@ -92,6 +107,8 @@ export default function PostKoriApp() {
     setLoading(true);
     setResult(null);
     setError(null);
+    setViewingOld(false);
+    setActiveHistoryId(null);
 
     // Scroll to the results area so mobile users see the progress
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
@@ -115,7 +132,21 @@ export default function PostKoriApp() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || statusMessage(res.status));
 
-      setResult(data as GeneratedPost);
+      const post = data as GeneratedPost;
+      setResult(post);
+
+      // Save to history with a tiny thumbnail
+      const item: HistoryItem = {
+        id: newId(),
+        createdAt: Date.now(),
+        thumb: await makeThumbnail(image),
+        productName: details.name.trim(),
+        language,
+        tone,
+        post,
+      };
+      setHistory((h) => addToHistory(h, item));
+      setActiveHistoryId(item.id);
     } catch (e) {
       const offline = typeof navigator !== "undefined" && !navigator.onLine;
       setError(
@@ -130,10 +161,35 @@ export default function PostKoriApp() {
     }
   }
 
+  function openFromHistory(item: HistoryItem) {
+    setResult(item.post);
+    setActiveHistoryId(item.id);
+    setViewingOld(true);
+    setError(null);
+    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  function deleteFromHistory(id: string) {
+    setHistory((h) => removeFromHistory(h, id));
+    if (id === activeHistoryId && viewingOld) {
+      setResult(null);
+      setViewingOld(false);
+    }
+    if (id === activeHistoryId) setActiveHistoryId(null);
+  }
+
+  function clearAllHistory() {
+    setHistory(clearHistory());
+    setActiveHistoryId(null);
+    if (viewingOld) {
+      setResult(null);
+      setViewingOld(false);
+    }
+  }
+
   async function onCopyAll() {
     if (!result) return;
-    const full = `${result.caption}\n\n${result.description}\n\n${result.pricePost}\n\n${result.hashtags.join(" ")}`;
-    if (await copyText(full)) {
+    if (await copyText(postToText(result))) {
       setCopiedAll(true);
       setTimeout(() => setCopiedAll(false), 2000);
     }
@@ -159,6 +215,7 @@ export default function PostKoriApp() {
               onChange={(f) => {
                 setFile(f);
                 setResult(null);
+                setViewingOld(false);
                 setError(null);
               }}
             />
@@ -197,15 +254,17 @@ export default function PostKoriApp() {
           {result ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-bold">আপনার পোস্ট তৈরি ✅</h2>
+                <h2 className="text-lg font-bold">{viewingOld ? "📚 আগের পোস্ট" : "আপনার পোস্ট তৈরি ✅"}</h2>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={onGenerate}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold transition hover:border-brand-500 hover:text-brand-600"
-                  >
-                    🔄 আরেকটা
-                  </button>
+                  {file && !viewingOld && (
+                    <button
+                      type="button"
+                      onClick={onGenerate}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold transition hover:border-brand-500 hover:text-brand-600"
+                    >
+                      🔄 আরেকটা
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={onCopyAll}
@@ -240,6 +299,15 @@ export default function PostKoriApp() {
             </div>
           )}
         </section>
+
+        {/* ---------- Bottom: saved posts ---------- */}
+        <PostHistory
+          items={history}
+          activeId={activeHistoryId}
+          onOpen={openFromHistory}
+          onDelete={deleteFromHistory}
+          onClearAll={clearAllHistory}
+        />
       </main>
 
       <Footer />

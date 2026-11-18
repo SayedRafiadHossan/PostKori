@@ -34,6 +34,7 @@ Each one can be copied with one tap, or all of them at once, and pasted straight
 - 🔒 **API key stays on the server.** The browser only talks to our own API route.
 - 🛡️ **Rate limiting** per visitor to protect the free AI quota
 - 🏪 **Shop profile** saved on the device and added to every post automatically (name, phone, delivery, bKash/Nagad/COD, page link)
+- 📚 **Post history**: the last 30 posts saved with thumbnails, to reopen, copy again or delete
 - 🔄 Regenerate, copy-all, Bangla error messages, loading states and social share image
 
 ## Tech stack
@@ -102,7 +103,8 @@ Open http://localhost:3000. Get a free Gemini API key at [Google AI Studio](http
 - [x] Bangla / English / Banglish + 4 tones
 - [x] Image compression, rate limiting, share image
 - [x] Save shop profile (name, phone, delivery, payments, page link) and auto-add to every post
-- [ ] Post history with login
+- [x] Post history (saved on device, with thumbnails)
+- [ ] Login + cloud sync
 - [ ] Festival templates (Eid, Puja, Boishakh offers)
 - [ ] Price tag / text overlay on the product photo
 - [ ] Post directly to a Facebook page
