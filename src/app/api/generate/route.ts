@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { NextResponse } from "next/server";
 import { buildPrompt } from "@/lib/prompt";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types";
 
 // This code runs only on the server — the API key is never sent to the browser.
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return error("Server is missing GEMINI_API_KEY. Add it to .env.local and restart the dev server.", 500);
+  }
+
+  // ---------- 0. Rate limit: max posts per visitor per hour ----------
+  const limit = rateLimit(getClientIp(req));
+  if (!limit.ok) {
+    return error(`আপনি এই ঘণ্টার সীমা পার করেছেন। ${limit.retryAfterMin} মিনিট পর আবার চেষ্টা করুন।`, 429);
   }
 
   // ---------- 1. Read and validate the form ----------
