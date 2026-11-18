@@ -20,7 +20,8 @@ const TONES: Tone[] = ["simple", "premium", "offer", "friendly"];
 
 // Models to try, in order. If one is busy (503) or not available, the next one is used.
 // Override with GEMINI_MODEL in .env.local / Vercel, e.g. "gemini-flash-lite-latest,gemini-flash-latest"
-const MODELS = (process.env.GEMINI_MODEL || "gemini-flash-latest,gemini-flash-lite-latest,gemini-2.5-flash")
+// Lite goes first: it's the fastest, least busy and has the biggest free quota — plenty for captions.
+const MODELS = (process.env.GEMINI_MODEL || "gemini-flash-lite-latest,gemini-flash-latest,gemini-2.5-flash")
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
@@ -46,8 +47,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Google is overloaded or our single call took too long → try again / next model
 const isBusy = (msg: string) =>
   msg === "AI_TIMEOUT" || /\b(500|503)\b|UNAVAILABLE|high demand|overloaded|INTERNAL/i.test(msg);
-// This model name doesn't exist for this key → skip to next model
+// This model can't be used right now (doesn't exist, quota used up, or rejects our settings) → try next model
 const isMissingModel = (msg: string) => /\b404\b|NOT_FOUND|not found|is not supported/i.test(msg);
+const isQuota = (msg: string) => /\b429\b|RESOURCE_EXHAUSTED|quota/i.test(msg);
+const isBadRequest = (msg: string) => /\b400\b|INVALID_ARGUMENT|invalid argument/i.test(msg);
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -90,7 +93,8 @@ async function callModel(
     );
   } catch (e) {
     const msg = errMsg(e);
-    if (msg === "AI_TIMEOUT" || !/thinking|budget/i.test(msg)) throw e;
+    // Some models reject "thinking off" with a generic 400 "invalid argument" — retry without it
+    if (msg === "AI_TIMEOUT" || !(/thinking|budget/i.test(msg) || isBadRequest(msg))) throw e;
     console.warn(`[PostKori] ${model} rejected thinkingConfig, retrying without it`);
     return withTimeout(ai.models.generateContent({ model, contents, config }), timeoutMs - (Date.now() - started));
   }
@@ -125,8 +129,9 @@ async function generateWithFallback(
           if (attempt < attempts) await sleep(1_000);
           continue;
         }
-        if (isMissingModel(msg)) {
-          console.warn(`[PostKori] ${model} not available, trying next model`);
+        if (/API key|PERMISSION_DENIED/i.test(msg)) throw e; // bad key — other models won't help
+        if (isMissingModel(msg) || isQuota(msg) || isBadRequest(msg)) {
+          console.warn(`[PostKori] ${model} can't be used now, trying next model: ${msg.slice(0, 120)}`);
           break;
         }
         throw e; // e.g. bad API key — no point trying other models
@@ -221,7 +226,7 @@ export async function POST(req: Request) {
     if (isBusy(msg)) {
       return error("AI সার্ভার এখন ব্যস্ত। ১-২ মিনিট পর আবার চেষ্টা করুন।", 503);
     }
-    if (msg.includes("429") || /quota|RESOURCE_EXHAUSTED/i.test(msg)) {
+    if (isQuota(msg)) {
       return error("এই মুহূর্তে অনেক রিকোয়েস্ট — এক মিনিট পর আবার চেষ্টা করুন।", 429);
     }
     if (/API key|PERMISSION_DENIED|\b401\b|\b403\b/i.test(msg)) {
