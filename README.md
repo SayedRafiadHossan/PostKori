@@ -2,7 +2,7 @@
 
 **An AI tool that turns a product photo into a ready-to-post Facebook post for Bangladeshi online sellers, in Bangla, English or Banglish.**
 
-🔗 **Live demo:** _coming soon_ · Built by [Sayed Rafiad Hossan](https://www.linkedin.com/in/rafiadhossan)
+🔗 **Live demo:** [postkori.vercel.app](https://postkori.vercel.app) · Built by [Sayed Rafiad Hossan](https://www.linkedin.com/in/rafiadhossan)
 
 ---
 
