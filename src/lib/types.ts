@@ -2,6 +2,8 @@ export type Language = "bn" | "en" | "mixed";
 
 export type Tone = "simple" | "premium" | "offer" | "friendly";
 
+export type Occasion = "none" | "eid" | "puja" | "boishakh" | "winter" | "newArrival" | "flashSale";
+
 export interface ProductDetails {
   name: string;
   price: string;

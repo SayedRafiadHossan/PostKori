@@ -1,7 +1,7 @@
 // Post history saved in the seller's browser (localStorage).
 // Each item keeps a tiny thumbnail so the list is easy to recognise without using much storage.
 
-import type { GeneratedPost, Language, Tone } from "./types";
+import type { GeneratedPost, Language, Occasion, Tone } from "./types";
 
 const STORAGE_KEY = "postkori:history:v1";
 export const MAX_HISTORY = 30;
@@ -13,6 +13,7 @@ export interface HistoryItem {
   productName: string;
   language: Language;
   tone: Tone;
+  occasion?: Occasion; // optional: posts saved before Step 8 don't have it
   post: GeneratedPost;
 }
 

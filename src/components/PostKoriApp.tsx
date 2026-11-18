@@ -28,7 +28,7 @@ import {
   loadShopProfile,
   saveShopProfile,
 } from "@/lib/shopProfile";
-import type { GeneratedPost, Language, ProductDetails, ShopProfile, Tone } from "@/lib/types";
+import type { GeneratedPost, Language, Occasion, ProductDetails, ShopProfile, Tone } from "@/lib/types";
 
 const languageOptions: Option<Language>[] = [
   { value: "bn", label: "বাংলা" },
@@ -41,6 +41,16 @@ const toneOptions: Option<Tone>[] = [
   { value: "premium", label: "প্রিমিয়াম", sub: "Premium" },
   { value: "offer", label: "অফার", sub: "Sale / Offer" },
   { value: "friendly", label: "বন্ধুসুলভ", sub: "Friendly" },
+];
+
+const occasionOptions: Option<Occasion>[] = [
+  { value: "none", label: "সাধারণ দিন", sub: "Regular" },
+  { value: "eid", label: "🌙 ঈদ", sub: "Eid" },
+  { value: "puja", label: "🪔 পূজা", sub: "Puja" },
+  { value: "boishakh", label: "🎊 বৈশাখ", sub: "Boishakh" },
+  { value: "winter", label: "❄️ শীত", sub: "Winter" },
+  { value: "newArrival", label: "🆕 নতুন এসেছে", sub: "New arrival" },
+  { value: "flashSale", label: "⚡ ফ্ল্যাশ সেল", sub: "Flash sale" },
 ];
 
 // Messages that rotate while the AI is working
@@ -61,6 +71,7 @@ export default function PostKoriApp() {
   const [details, setDetails] = useState<ProductDetails>(emptyDetails);
   const [language, setLanguage] = useState<Language>("bn");
   const [tone, setTone] = useState<Tone>("simple");
+  const [occasion, setOccasion] = useState<Occasion>("none");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [result, setResult] = useState<GeneratedPost | null>(null);
@@ -122,6 +133,7 @@ export default function PostKoriApp() {
       form.append("image", image);
       form.append("language", language);
       form.append("tone", tone);
+      form.append("occasion", occasion);
       form.append("name", details.name);
       form.append("price", details.price);
       form.append("details", details.details);
@@ -143,6 +155,7 @@ export default function PostKoriApp() {
         productName: details.name.trim(),
         language,
         tone,
+        occasion,
         post,
       };
       setHistory((h) => addToHistory(h, item));
@@ -225,6 +238,8 @@ export default function PostKoriApp() {
             <OptionPicker label="ভাষা" options={languageOptions} value={language} onChange={setLanguage} />
 
             <OptionPicker label="পোস্টের ধরন" options={toneOptions} value={tone} onChange={setTone} />
+
+            <OptionPicker label="উপলক্ষ" options={occasionOptions} value={occasion} onChange={setOccasion} />
 
             <button
               type="button"

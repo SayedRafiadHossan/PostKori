@@ -1,4 +1,4 @@
-import type { Language, PaymentMethod, ProductDetails, ShopProfile, Tone } from "./types";
+import type { Language, Occasion, PaymentMethod, ProductDetails, ShopProfile, Tone } from "./types";
 
 const paymentNames: Record<PaymentMethod, string> = {
   cod: "Cash on delivery",
@@ -23,6 +23,35 @@ const toneRules: Record<Tone, string> = {
     "Tone: exciting sale/offer post. Create urgency (limited stock, limited time) without making false claims. Energetic emojis (🔥🎉⚡). If no discount is given, do NOT invent a percentage — say 'বিশেষ অফার' / 'special offer' instead.",
   friendly:
     "Tone: warm and friendly, like a trusted apu/bhai talking to customers. Conversational, a few cheerful emojis.",
+};
+
+// Festival / campaign styles. Greetings must be respectful; never invent discounts or deadlines.
+const occasionRules: Record<Occasion, string> = {
+  none: "",
+  eid: `Occasion: EID (ঈদ) shopping season.
+- Open the caption with a warm Eid greeting ("ঈদ মোবারক 🌙" / "Eid Mubarak 🌙").
+- Present the product as perfect for Eid — outfits, gifting for family, festive look — whatever fits the product.
+- Gentle urgency: ordering early helps get it before Eid. Do NOT promise a guaranteed delivery date.
+- Festive emojis like 🌙 ✨ 🎁. Include hashtags such as #EidCollection #ঈদ_কালেকশন #EidMubarak.`,
+  puja: `Occasion: DURGA PUJA (শারদীয় দুর্গোৎসব) season.
+- Open with a respectful greeting ("শুভ শারদীয়া 🪔" / "Happy Durga Puja").
+- Present the product as great for Puja outfits, pandal hopping or gifting — whatever fits the product.
+- Festive emojis like 🪔 🌺 ✨. Include hashtags such as #PujaCollection #শারদীয়া #DurgaPuja.`,
+  boishakh: `Occasion: POHELA BOISHAKH (Bangla New Year).
+- Open with "শুভ নববর্ষ 🎊" / "Shubho Noboborsho".
+- Use a festive, cultural, red-and-white Boishakh mood; present the product as perfect for Boishakhi celebrations or gifts.
+- Emojis like 🎊 🌸 🪘. Include hashtags such as #PohelaBoishakh #শুভ_নববর্ষ #বৈশাখী_কালেকশন.`,
+  winter: `Occasion: WINTER collection / winter sale.
+- Cozy, warm mood: highlight comfort and warmth for the cold season where it fits the product.
+- Emojis like ❄️ 🧣 ☕. Include hashtags such as #WinterCollection #শীতের_কালেকশন #WinterSale.
+- Only mention a sale or discount if the seller gave one; otherwise say "শীতের বিশেষ কালেকশন" / "winter special".`,
+  newArrival: `Occasion: NEW ARRIVAL announcement.
+- Excitement about something new: "নতুন এসেছে!" / "Just arrived!". Highlight freshness and that early buyers get first pick.
+- Emojis like 🆕 ✨ 🛍️. Include hashtags such as #NewArrival #নতুন_কালেকশন.`,
+  flashSale: `Occasion: FLASH SALE.
+- High energy and urgency: "সীমিত সময়ের অফার" / "Limited-time offer", "স্টক শেষ হওয়ার আগেই".
+- Do NOT invent a discount percentage, end time or quantity — use only what the seller gave; otherwise keep it general.
+- Emojis like ⚡ ⏰ 🔥. Include hashtags such as #FlashSale #অফার #LimitedOffer.`,
 };
 
 function shopSection(shop: ShopProfile | null | undefined): string {
@@ -58,6 +87,7 @@ export function buildPrompt(
   language: Language,
   tone: Tone,
   shop?: ShopProfile | null,
+  occasion: Occasion = "none",
 ): string {
   const given = [
     details.name && `Product name: ${details.name}`,
@@ -76,6 +106,7 @@ Seller's information:
 ${given || "(The seller gave no extra information — rely on the photo.)"}
 
 ${shopSection(shop)}
+${occasionRules[occasion]}
 ${languageRules[language]}
 ${toneRules[tone]}
 

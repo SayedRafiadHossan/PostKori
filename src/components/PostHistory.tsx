@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { copyText } from "./ResultCard";
 import { postToText, type HistoryItem } from "@/lib/history";
-import type { Language, Tone } from "@/lib/types";
+import type { Language, Occasion, Tone } from "@/lib/types";
 
 type Props = {
   items: HistoryItem[];
@@ -15,6 +15,16 @@ type Props = {
 
 const languageLabel: Record<Language, string> = { bn: "বাংলা", en: "English", mixed: "মিক্স" };
 const toneLabel: Record<Tone, string> = { simple: "সাধারণ", premium: "প্রিমিয়াম", offer: "অফার", friendly: "বন্ধুসুলভ" };
+
+const occasionLabel: Record<Occasion, string> = {
+  none: "",
+  eid: "🌙 ঈদ",
+  puja: "🪔 পূজা",
+  boishakh: "🎊 বৈশাখ",
+  winter: "❄️ শীত",
+  newArrival: "🆕 নতুন",
+  flashSale: "⚡ ফ্ল্যাশ সেল",
+};
 
 function formatDate(ts: number): string {
   try {
@@ -117,6 +127,11 @@ export default function PostHistory({ items, activeId, onOpen, onDelete, onClear
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                     <span className="rounded-full bg-slate-100 px-2 py-0.5">{languageLabel[item.language]}</span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5">{toneLabel[item.tone]}</span>
+                    {item.occasion && item.occasion !== "none" && (
+                      <span className="rounded-full bg-accent-500/10 px-2 py-0.5 text-accent-500">
+                        {occasionLabel[item.occasion]}
+                      </span>
+                    )}
                     <span className="text-muted">{formatDate(item.createdAt)}</span>
                   </div>
                   <div className="mt-2 flex gap-1.5">

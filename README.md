@@ -28,6 +28,7 @@ Each one can be copied with one tap, or all of them at once, and pasted straight
 - 🖼️ **Image understanding** with Google Gemini (multimodal AI)
 - 🇧🇩 **3 language modes:** বাংলা, English, and Banglish (the mixed style real sellers use)
 - 🎨 **4 tones:** Simple, Premium, Offer/Sale, Friendly
+- 🎉 **Occasion templates:** Eid, Puja, Pohela Boishakh, Winter, New arrival, Flash sale, with festive greetings, emojis and hashtags
 - ✅ **Honesty rules in the prompt:** never invents discounts, fabrics or brands it can't see
 - 📱 **Mobile-first UI.** Most sellers work from their phones.
 - ⚡ **Photos are compressed in the browser** before upload (5MB → ~300KB), so it's fast on mobile data
@@ -105,7 +106,7 @@ Open http://localhost:3000. Get a free Gemini API key at [Google AI Studio](http
 - [x] Save shop profile (name, phone, delivery, payments, page link) and auto-add to every post
 - [x] Post history (saved on device, with thumbnails)
 - [ ] Login + cloud sync
-- [ ] Festival templates (Eid, Puja, Boishakh offers)
+- [x] Occasion templates (Eid, Puja, Pohela Boishakh, Winter, New arrival, Flash sale)
 - [ ] Price tag / text overlay on the product photo
 - [ ] Post directly to a Facebook page
 

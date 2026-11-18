@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, type GenerateContentResponse } from "@google/genai";
 import { NextResponse } from "next/server";
 import { buildPrompt } from "@/lib/prompt";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import type { GeneratedPost, Language, PaymentMethod, ProductDetails, ShopProfile, Tone } from "@/lib/types";
+import type { GeneratedPost, Language, Occasion, PaymentMethod, ProductDetails, ShopProfile, Tone } from "@/lib/types";
 
 // This code runs only on the server — the API key is never sent to the browser.
 export const runtime = "nodejs";
@@ -17,6 +17,7 @@ const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const LANGUAGES: Language[] = ["bn", "en", "mixed"];
 const TONES: Tone[] = ["simple", "premium", "offer", "friendly"];
+const OCCASIONS: Occasion[] = ["none", "eid", "puja", "boishakh", "winter", "newArrival", "flashSale"];
 const PAYMENTS: PaymentMethod[] = ["bkash", "nagad", "rocket", "cod", "card"];
 
 // Reads the optional shop profile sent by the browser, keeping only safe, short values
@@ -204,6 +205,8 @@ export async function POST(req: Request) {
   const language = String(form.get("language")) as Language;
   const tone = String(form.get("tone")) as Tone;
   if (!LANGUAGES.includes(language) || !TONES.includes(tone)) return error("Invalid options.", 400);
+  const rawOccasion = String(form.get("occasion") ?? "none") as Occasion;
+  const occasion: Occasion = OCCASIONS.includes(rawOccasion) ? rawOccasion : "none";
 
   const clean = (v: FormDataEntryValue | null) => String(v ?? "").trim().slice(0, 300);
   const details: ProductDetails = {
@@ -223,7 +226,7 @@ export async function POST(req: Request) {
         role: "user",
         parts: [
           { inlineData: { mimeType: image.type, data: base64 } },
-          { text: buildPrompt(details, language, tone, parseShop(form.get("shop"))) },
+          { text: buildPrompt(details, language, tone, parseShop(form.get("shop")), occasion) },
         ],
       },
     ];
