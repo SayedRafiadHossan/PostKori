@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Hind_Siliguri } from "next/font/google";
+import { Hind_Siliguri, Playfair_Display, Tiro_Bangla } from "next/font/google";
 import "./globals.css";
 
 // Hind Siliguri supports both Bangla and English characters
@@ -7,6 +7,22 @@ const hind = Hind_Siliguri({
   subsets: ["bengali", "latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-hind",
+  display: "swap",
+});
+
+// Classic Bangla serif for headings
+const tiro = Tiro_Bangla({
+  subsets: ["bengali", "latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-tiro",
+  display: "swap",
+});
+
+// Elegant Latin serif for the "PostKori" wordmark
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
   display: "swap",
 });
 
@@ -36,14 +52,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2f6bff",
+  themeColor: "#0f3d2e",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="bn" className={hind.variable}>
+    <html lang="bn" className={`${hind.variable} ${tiro.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

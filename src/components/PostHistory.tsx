@@ -46,10 +46,10 @@ export default function PostHistory({ items, activeId, onOpen, onDelete, onClear
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-bold">📚 আগের পোস্ট</h2>
+          <h2 className="text-2xl text-brand-500">আগের পোস্ট</h2>
           <p className="text-sm text-muted">
             {items.length > 0
               ? `${items.length}টি পোস্ট সেভ আছে · সর্বশেষ ৩০টি রাখা হয়`
@@ -91,7 +91,7 @@ export default function PostHistory({ items, activeId, onOpen, onDelete, onClear
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 px-6 py-8 text-center text-sm text-muted">
+        <div className="rounded-2xl border border-dashed border-gold-300 px-6 py-8 text-center text-sm text-muted">
           এখনো কোনো পোস্ট নেই — প্রথম পোস্টটি তৈরি করুন ✨
         </div>
       ) : (
@@ -128,7 +128,7 @@ export default function PostHistory({ items, activeId, onOpen, onDelete, onClear
                     <span className="rounded-full bg-slate-100 px-2 py-0.5">{languageLabel[item.language]}</span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5">{toneLabel[item.tone]}</span>
                     {item.occasion && item.occasion !== "none" && (
-                      <span className="rounded-full bg-accent-500/10 px-2 py-0.5 text-accent-500">
+                      <span className="rounded-full bg-gold-100 px-2 py-0.5 text-gold-600">
                         {occasionLabel[item.occasion]}
                       </span>
                     )}

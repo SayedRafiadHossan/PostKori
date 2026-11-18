@@ -1,28 +1,83 @@
 @import "tailwindcss";
 
-/* PostKori brand tokens */
+/* PostKori — Emerald & Gold, a classic heritage-boutique look */
 @theme {
   --font-sans: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-tiro), var(--font-hind), Georgia, serif;
+  --font-display: var(--font-playfair), var(--font-tiro), Georgia, serif;
 
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-500: #2f6bff;
-  --color-brand-600: #1f55e6;
-  --color-brand-700: #1a44b8;
+  /* Primary: deep emerald (kept under the "brand" name so all components pick it up) */
+  --color-brand-50: #eef3ef;
+  --color-brand-100: #d5e3da;
+  --color-brand-500: #0f3d2e;
+  --color-brand-600: #0a2e22;
+  --color-brand-700: #0f3d2e;
 
-  --color-accent-500: #ff7a1a; /* warm orange for offers / CTAs */
+  /* Accent: antique gold */
+  --color-accent-500: #b08d57;
+  --color-gold-100: #f3ead9;
+  --color-gold-300: #d9c39b;
+  --color-gold-600: #8c6d3f;
 
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
+  --color-ink: #1c1917;
+  --color-muted: #6b6358;
+  --color-ivory: #fbf8f1;
+  --color-paper: #fffdf8;
+
+  /* Warm neutrals instead of cool grey */
+  --color-slate-50: #f8f4ec;
+  --color-slate-100: #f1ebdf;
+  --color-slate-200: #e7dfd0;
+  --color-slate-300: #d6cbb6;
+  --color-slate-400: #a89d8a;
+  --color-slate-700: #3f3a33;
+
+  --shadow-sm: 0 1px 2px rgb(60 45 20 / 0.05), 0 4px 16px -8px rgb(60 45 20 / 0.12);
+  --shadow-md: 0 2px 4px rgb(15 61 46 / 0.12), 0 8px 20px -10px rgb(15 61 46 / 0.45);
 }
 
 html,
 body {
-  background: #f8fafc;
+  background: var(--color-ivory);
   color: var(--color-ink);
 }
 
 /* Bangla text needs a little more line height to stay readable */
 body {
   line-height: 1.65;
+}
+
+/* Classic serif for headings */
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Cards sit on paper, not pure white */
+.bg-white {
+  background-color: var(--color-paper);
+}
+
+/* Clear, on-brand keyboard focus */
+:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-gold-100);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

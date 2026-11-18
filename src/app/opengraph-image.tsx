@@ -1,9 +1,14 @@
 import { ImageResponse } from "next/og";
 
 // The preview image shown when someone shares the PostKori link on Facebook, LinkedIn, etc.
+// Kept in English: the default OG renderer has no Bangla font.
 export const alt = "PostKori — AI Facebook post generator for Bangladeshi online sellers";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+const EMERALD = "#0f3d2e";
+const GOLD = "#b08d57";
+const IVORY = "#fbf8f1";
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -13,54 +18,61 @@ export default function OpengraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "80px",
-          background: "linear-gradient(135deg, #eef6ff 0%, #ffffff 60%, #fff3e8 100%)",
-          fontFamily: "sans-serif",
+          background: EMERALD,
+          padding: "36px",
+          fontFamily: "serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <div
-            style={{
-              width: "96px",
-              height: "96px",
-              borderRadius: "24px",
-              background: "#2f6bff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "56px",
-            }}
-          >
-            📸
-          </div>
-          <div style={{ display: "flex", fontSize: "80px", fontWeight: 800, color: "#0f172a" }}>
-            Post<span style={{ color: "#2f6bff" }}>Kori</span>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", marginTop: "40px", fontSize: "44px", fontWeight: 700, color: "#0f172a" }}>
-          Product photo in. Facebook post out.
-        </div>
-        <div style={{ display: "flex", marginTop: "16px", fontSize: "30px", color: "#64748b" }}>
-          AI captions, descriptions, hashtags & price posts in Bangla and English.
-        </div>
-
+        {/* Ivory panel framed by a double gold rule */}
         <div
           style={{
+            flex: 1,
             display: "flex",
-            marginTop: "48px",
-            alignSelf: "flex-start",
-            background: "#ff7a1a",
-            color: "white",
-            fontSize: "26px",
-            fontWeight: 700,
-            padding: "12px 28px",
-            borderRadius: "999px",
+            border: `2px solid ${GOLD}`,
+            padding: "10px",
           }}
         >
-          Free for Bangladeshi online sellers
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              border: `1px solid ${GOLD}`,
+              background: IVORY,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "88px",
+                height: "88px",
+                borderRadius: "999px",
+                background: EMERALD,
+                border: `3px solid ${GOLD}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#f3ead9",
+                fontSize: "44px",
+              }}
+            >
+              P
+            </div>
+            <div style={{ display: "flex", marginTop: "28px", fontSize: "84px", color: EMERALD }}>PostKori</div>
+            <div style={{ display: "flex", alignItems: "center", marginTop: "12px", color: GOLD, fontSize: "24px" }}>
+              <div style={{ width: "120px", height: "1px", background: GOLD }} />
+              <div style={{ margin: "0 18px" }}>◆</div>
+              <div style={{ width: "120px", height: "1px", background: GOLD }} />
+            </div>
+            <div style={{ display: "flex", marginTop: "22px", fontSize: "40px", color: "#1c1917" }}>
+              Product photo in. Facebook post out.
+            </div>
+            <div style={{ display: "flex", marginTop: "12px", fontSize: "26px", color: "#6b6358" }}>
+              Captions, descriptions, hashtags and price posts in Bangla and English
+            </div>
+          </div>
         </div>
       </div>
     ),

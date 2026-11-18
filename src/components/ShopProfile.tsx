@@ -11,7 +11,7 @@ type Props = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition placeholder:text-slate-400 focus:border-accent-500 focus:ring-2 focus:ring-gold-100";
 
 export default function ShopProfile({ profile, onSave, onClear }: Props) {
   const hasProfile = isProfileSet(profile);
@@ -55,7 +55,7 @@ export default function ShopProfile({ profile, onSave, onClear }: Props) {
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       {/* Header — always visible */}
       <button
         type="button"
@@ -64,9 +64,9 @@ export default function ShopProfile({ profile, onSave, onClear }: Props) {
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/10 text-xl">🏪</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-accent-500/60 bg-gold-100 font-serif text-lg text-brand-500">শ</span>
           <div className="leading-tight">
-            <p className="font-semibold">আমার শপ</p>
+            <p className="font-serif text-lg text-brand-500">আমার শপ</p>
             <p className="text-sm text-muted">
               {hasProfile ? (
                 <span className="text-green-700">✓ {profile.shopName || "শপের তথ্য সেভ করা আছে"}</span>

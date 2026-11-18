@@ -95,12 +95,12 @@ export default function UploadBox({ file, onChange }: Props) {
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
-            dragging ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50 hover:border-brand-500 hover:bg-brand-50"
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center transition ${
+            dragging ? "border-brand-500 bg-brand-50" : "border-gold-300 bg-slate-50 hover:border-accent-500 hover:bg-gold-100/50"
           }`}
         >
-          <div className="mb-3 text-4xl">🖼️</div>
-          <p className="font-semibold">পণ্যের ছবি আপলোড করুন</p>
+          <div aria-hidden className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-accent-500/60 bg-gold-100 text-xl text-brand-500">＋</div>
+          <p className="font-serif text-lg text-brand-500">পণ্যের ছবি আপলোড করুন</p>
           <p className="mt-1 text-sm text-muted">ট্যাপ করুন বা ছবি এখানে টেনে আনুন</p>
           <p className="mt-2 text-xs text-muted">JPG, PNG, WEBP · সর্বোচ্চ {MAX_SIZE_MB}MB</p>
         </div>

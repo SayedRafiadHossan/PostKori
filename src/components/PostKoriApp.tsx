@@ -212,14 +212,27 @@ export default function PostKoriApp() {
     <>
       <Header />
 
+      {/* Heading band — the one bold moment on the page */}
+      <section className="mx-auto max-w-5xl px-4 pb-2 pt-10 text-center">
+        <h1 className="font-serif text-4xl leading-tight text-brand-500 sm:text-5xl">ছবি দিন, পোস্ট নিন</h1>
+        <div aria-hidden className="mx-auto mt-4 flex max-w-xs items-center gap-3 text-accent-500">
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-accent-500" />
+          <span className="text-sm">❖</span>
+          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-accent-500" />
+        </div>
+        <p className="mx-auto mt-4 max-w-xl text-muted">
+          পণ্যের একটি ছবি থেকে ফেসবুকের জন্য ক্যাপশন, বিবরণ, দামের পোস্ট আর হ্যাশট্যাগ — বাংলা, ইংরেজি বা মিক্স ভাষায়।
+        </p>
+      </section>
+
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-2 lg:items-start">
         {/* ---------- Left: shop profile + inputs ---------- */}
         <div className="space-y-4">
           <ShopProfileCard profile={shop} onSave={handleSaveShop} onClear={handleClearShop} />
 
-          <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
-              <h1 className="text-xl font-bold">নতুন পোস্ট তৈরি করুন</h1>
+              <h2 className="text-2xl text-brand-500">নতুন পোস্ট তৈরি করুন</h2>
               <p className="text-sm text-muted">ছবি দিন, কয়েকটি তথ্য দিন — বাকিটা PostKori করবে।</p>
             </div>
 
@@ -245,7 +258,7 @@ export default function PostKoriApp() {
               type="button"
               onClick={onGenerate}
               disabled={!file || loading}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-500 px-4 py-3.5 text-lg font-semibold text-white shadow-md transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3.5 font-serif text-lg text-gold-100 shadow-md ring-1 ring-inset ring-accent-500/50 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white disabled:shadow-none disabled:ring-0"
             >
               {loading ? (
                 <>
@@ -253,9 +266,9 @@ export default function PostKoriApp() {
                   {loadingSteps[loadingStep]}
                 </>
               ) : result ? (
-                <>🔄 নতুন অপশনে আবার তৈরি করুন</>
+                <>নতুন অপশনে আবার তৈরি করুন</>
               ) : (
-                <>✨ পোস্ট তৈরি করুন</>
+                <>পোস্ট তৈরি করুন</>
               )}
             </button>
 
@@ -269,7 +282,7 @@ export default function PostKoriApp() {
           {result ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-bold">{viewingOld ? "📚 আগের পোস্ট" : "আপনার পোস্ট তৈরি ✅"}</h2>
+                <h2 className="text-2xl text-brand-500">{viewingOld ? "আগের পোস্ট" : "আপনার পোস্ট তৈরি"}</h2>
                 <div className="flex gap-2">
                   {file && !viewingOld && (
                     <button
@@ -277,24 +290,24 @@ export default function PostKoriApp() {
                       onClick={onGenerate}
                       className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold transition hover:border-brand-500 hover:text-brand-600"
                     >
-                      🔄 আরেকটা
+                      আরেকটা তৈরি করুন
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={onCopyAll}
                     className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                      copiedAll ? "bg-green-600 text-white" : "bg-accent-500 text-white hover:opacity-90"
+                      copiedAll ? "bg-green-600 text-white" : "bg-accent-500 text-white hover:bg-gold-600"
                     }`}
                   >
                     {copiedAll ? "সব কপি হয়েছে ✓" : "সব একসাথে কপি"}
                   </button>
                 </div>
               </div>
-              <ResultCard icon="📣" title="ফেসবুক ক্যাপশন" text={result.caption} />
-              <ResultCard icon="📝" title="পণ্যের বিবরণ" text={result.description} />
-              <ResultCard icon="💰" title="দাম ও ডেলিভারি পোস্ট" text={result.pricePost} />
-              <ResultCard icon="#️⃣" title="হ্যাশট্যাগ" text={result.hashtags.join(" ")} />
+              <ResultCard title="ফেসবুক ক্যাপশন" text={result.caption} />
+              <ResultCard title="পণ্যের বিবরণ" text={result.description} />
+              <ResultCard title="দাম ও ডেলিভারি পোস্ট" text={result.pricePost} />
+              <ResultCard title="হ্যাশট্যাগ" text={result.hashtags.join(" ")} />
             </>
           ) : loading ? (
             <div className="space-y-4">
@@ -307,9 +320,9 @@ export default function PostKoriApp() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 px-6 py-16 text-center">
-              <div className="mb-3 text-4xl">💬</div>
-              <p className="font-semibold">এখানে আপনার পোস্ট দেখা যাবে</p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gold-300 bg-white/60 px-6 py-16 text-center">
+              <div aria-hidden className="mb-3 font-serif text-3xl text-accent-500">❖</div>
+              <p className="font-serif text-xl text-brand-500">এখানে আপনার পোস্ট দেখা যাবে</p>
               <p className="mt-1 text-sm text-muted">ক্যাপশন, বিবরণ, দামের পোস্ট আর হ্যাশট্যাগ — সব এক জায়গায়।</p>
             </div>
           )}

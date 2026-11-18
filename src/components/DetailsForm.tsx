@@ -8,7 +8,7 @@ type Props = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition placeholder:text-slate-400 focus:border-accent-500 focus:ring-2 focus:ring-gold-100";
 
 export default function DetailsForm({ value, onChange }: Props) {
   function set<K extends keyof ProductDetails>(key: K, v: string) {
