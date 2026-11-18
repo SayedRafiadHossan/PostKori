@@ -19,5 +19,5 @@ Then open http://localhost:3000
 - [x] Step 1 — Project setup
 - [x] Step 2 — UI screens (upload, options, result cards) — using sample data
 - [x] Step 3 — Gemini AI integration
-- [ ] Step 4 — Polish (loading, errors, mobile)
+- [x] Step 4 — Polish (image compression, regenerate, loading states, footer, favicon, share image)
 - [ ] Step 5 — Deploy to Vercel

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
-const MAX_SIZE_MB = 5;
+const MAX_SIZE_MB = 15; // big phone photos are fine — we shrink them before upload
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
 type Props = {

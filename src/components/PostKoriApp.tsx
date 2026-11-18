@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./Header";
+import Footer from "./Footer";
 import UploadBox from "./UploadBox";
 import DetailsForm from "./DetailsForm";
 import OptionPicker, { type Option } from "./OptionPicker";
 import ResultCard, { copyText } from "./ResultCard";
+import { compressImage } from "@/lib/compressImage";
 import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types";
 
 const languageOptions: Option<Language>[] = [
@@ -21,6 +23,9 @@ const toneOptions: Option<Tone>[] = [
   { value: "friendly", label: "বন্ধুসুলভ", sub: "Friendly" },
 ];
 
+// Messages that rotate while the AI is working
+const loadingSteps = ["ছবি দেখছি…", "পণ্যটি বুঝছি…", "ক্যাপশন লিখছি…", "হ্যাশট্যাগ বাছাই করছি…", "শেষ করছি…"];
+
 const emptyDetails: ProductDetails = { name: "", price: "", details: "", deliveryCharge: "" };
 
 export default function PostKoriApp() {
@@ -29,21 +34,36 @@ export default function PostKoriApp() {
   const [language, setLanguage] = useState<Language>("bn");
   const [tone, setTone] = useState<Tone>("simple");
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [result, setResult] = useState<GeneratedPost | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
 
+  // Rotate the loading message every 1.6 seconds
+  useEffect(() => {
+    if (!loading) return;
+    setLoadingStep(0);
+    const id = setInterval(() => setLoadingStep((s) => Math.min(s + 1, loadingSteps.length - 1)), 1600);
+    return () => clearInterval(id);
+  }, [loading]);
+
   async function onGenerate() {
-    if (!file) return;
+    if (!file || loading) return;
     setLoading(true);
     setResult(null);
     setError(null);
 
+    // Scroll to the results area so mobile users see the progress
+    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+
     try {
+      // Shrink the photo first — much faster on mobile data
+      const image = await compressImage(file);
+
       // Send the photo + options to our own backend route (src/app/api/generate/route.ts)
       const form = new FormData();
-      form.append("image", file);
+      form.append("image", image);
       form.append("language", language);
       form.append("tone", tone);
       form.append("name", details.name);
@@ -52,14 +72,19 @@ export default function PostKoriApp() {
       form.append("deliveryCharge", details.deliveryCharge);
 
       const res = await fetch("/api/generate", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "কিছু একটা সমস্যা হয়েছে।");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
 
       setResult(data as GeneratedPost);
-      // On mobile, scroll down to the results
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "কিছু একটা সমস্যা হয়েছে।");
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
+      setError(
+        offline
+          ? "ইন্টারনেট সংযোগ নেই। সংযোগ চেক করে আবার চেষ্টা করুন।"
+          : e instanceof Error
+            ? e.message
+            : "কিছু একটা সমস্যা হয়েছে।",
+      );
     } finally {
       setLoading(false);
     }
@@ -86,7 +111,14 @@ export default function PostKoriApp() {
             <p className="text-sm text-muted">ছবি দিন, কয়েকটি তথ্য দিন — বাকিটা PostKori করবে।</p>
           </div>
 
-          <UploadBox file={file} onChange={setFile} />
+          <UploadBox
+            file={file}
+            onChange={(f) => {
+              setFile(f);
+              setResult(null);
+              setError(null);
+            }}
+          />
 
           <DetailsForm value={details} onChange={setDetails} />
 
@@ -103,33 +135,43 @@ export default function PostKoriApp() {
             {loading ? (
               <>
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                তৈরি হচ্ছে...
+                {loadingSteps[loadingStep]}
               </>
+            ) : result ? (
+              <>🔄 নতুন অপশনে আবার তৈরি করুন</>
             ) : (
               <>✨ পোস্ট তৈরি করুন</>
             )}
           </button>
-          {error && (
-            <p className="-mt-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">⚠️ {error}</p>
-          )}
+
+          {error && <p className="-mt-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">⚠️ {error}</p>}
           {!file && <p className="-mt-3 text-center text-xs text-muted">শুরু করতে আগে একটি ছবি আপলোড করুন</p>}
         </section>
 
         {/* ---------- Right: results ---------- */}
-        <section ref={resultsRef} className="scroll-mt-20 space-y-4">
+        <section ref={resultsRef} className="scroll-mt-20 space-y-4" aria-live="polite">
           {result ? (
             <>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-bold">আপনার পোস্ট তৈরি ✅</h2>
-                <button
-                  type="button"
-                  onClick={onCopyAll}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    copiedAll ? "bg-green-600 text-white" : "bg-accent-500 text-white hover:opacity-90"
-                  }`}
-                >
-                  {copiedAll ? "সব কপি হয়েছে ✓" : "সব একসাথে কপি"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onGenerate}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold transition hover:border-brand-500 hover:text-brand-600"
+                  >
+                    🔄 আরেকটা
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCopyAll}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      copiedAll ? "bg-green-600 text-white" : "bg-accent-500 text-white hover:opacity-90"
+                    }`}
+                  >
+                    {copiedAll ? "সব কপি হয়েছে ✓" : "সব একসাথে কপি"}
+                  </button>
+                </div>
               </div>
               <ResultCard icon="📣" title="ফেসবুক ক্যাপশন" text={result.caption} />
               <ResultCard icon="📝" title="পণ্যের বিবরণ" text={result.description} />
@@ -138,6 +180,10 @@ export default function PostKoriApp() {
             </>
           ) : loading ? (
             <div className="space-y-4">
+              <p className="flex items-center gap-2 font-semibold text-brand-600">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-100 border-t-brand-500" />
+                {loadingSteps[loadingStep]}
+              </p>
               {[0, 1, 2].map((i) => (
                 <div key={i} className="h-32 animate-pulse rounded-2xl bg-slate-200" />
               ))}
@@ -151,6 +197,8 @@ export default function PostKoriApp() {
           )}
         </section>
       </main>
+
+      <Footer />
     </>
   );
 }
