@@ -15,3 +15,14 @@ export interface GeneratedPost {
   hashtags: string[];
   pricePost: string;
 }
+
+export type PaymentMethod = "bkash" | "nagad" | "rocket" | "cod" | "card";
+
+export interface ShopProfile {
+  shopName: string;
+  phone: string; // phone / WhatsApp for orders
+  deliveryInside: string; // inside Dhaka, e.g. "60"
+  deliveryOutside: string; // outside Dhaka, e.g. "120"
+  payments: PaymentMethod[];
+  pageLink: string; // Facebook page or website
+}

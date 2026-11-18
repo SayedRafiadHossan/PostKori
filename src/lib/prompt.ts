@@ -1,4 +1,12 @@
-import type { Language, ProductDetails, Tone } from "./types";
+import type { Language, PaymentMethod, ProductDetails, ShopProfile, Tone } from "./types";
+
+const paymentNames: Record<PaymentMethod, string> = {
+  cod: "Cash on delivery",
+  bkash: "bKash",
+  nagad: "Nagad",
+  rocket: "Rocket",
+  card: "Card",
+};
 
 const languageRules: Record<Language, string> = {
   bn: "Write everything in natural, fluent Bangla (Bengali script). Use Bangla digits for prices (e.g. ১২৫০ টাকা). Avoid English words unless they are very common brand/product terms.",
@@ -17,7 +25,40 @@ const toneRules: Record<Tone, string> = {
     "Tone: warm and friendly, like a trusted apu/bhai talking to customers. Conversational, a few cheerful emojis.",
 };
 
-export function buildPrompt(details: ProductDetails, language: Language, tone: Tone): string {
+function shopSection(shop: ShopProfile | null | undefined): string {
+  if (!shop) return "";
+  const delivery = [
+    shop.deliveryInside && `inside Dhaka ${shop.deliveryInside} Tk`,
+    shop.deliveryOutside && `outside Dhaka ${shop.deliveryOutside} Tk`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const lines = [
+    shop.shopName && `Shop name: ${shop.shopName}`,
+    shop.phone && `Phone/WhatsApp for orders: ${shop.phone}`,
+    delivery && `Delivery charge: ${delivery}`,
+    shop.payments.length > 0 && `Payment methods: ${shop.payments.map((p) => paymentNames[p]).join(", ")}`,
+    shop.pageLink && `Facebook page: ${shop.pageLink}`,
+  ].filter(Boolean);
+  if (lines.length === 0) return "";
+
+  return `
+Seller's saved shop information (use these details exactly — never change names, numbers or links):
+${lines.join("\n")}
+
+How to use the shop information:
+- In "pricePost": if a shop name is given, start with a line like "🏪 <shop name>". Include the delivery charge (both inside and outside Dhaka if given). Add a line for each given item: "📞 <phone>" for orders, "💳 <payment methods>", "🔗 <page link>". Only include lines for information that was given.
+- In "caption": mention the shop name naturally once, and if a phone number is given, include it in the call to action (e.g. "অর্ডার করতে ইনবক্স করুন অথবা কল করুন: 01XXXXXXXXX").
+- If payment methods are given and "Cash on delivery" is not among them, do not promise cash on delivery.
+`;
+}
+
+export function buildPrompt(
+  details: ProductDetails,
+  language: Language,
+  tone: Tone,
+  shop?: ShopProfile | null,
+): string {
   const given = [
     details.name && `Product name: ${details.name}`,
     details.price && `Price: ${details.price} Tk`,
@@ -34,6 +75,7 @@ Look carefully at the product photo. Identify the product, its colour, material/
 Seller's information:
 ${given || "(The seller gave no extra information — rely on the photo.)"}
 
+${shopSection(shop)}
 ${languageRules[language]}
 ${toneRules[tone]}
 
@@ -45,7 +87,7 @@ Produce four things:
 
 3. "hashtags": 8–12 relevant hashtags as an array of strings, each starting with '#', no spaces inside a tag (use _ instead). Mix Bangla and English tags that Bangladeshi buyers search for (e.g. product type, #OnlineShopBD, location like #Dhaka).
 
-4. "pricePost": a short price & delivery block with one item per line, using emojis like 💰 🚚 💵 📩. Include price and delivery charge if given. If price is NOT given, write the price line with a blank placeholder like "মূল্য: ___ টাকা" (or "Price: ___ Tk" in English) so the seller can fill it in. Always add a line for cash on delivery and how to order.
+4. "pricePost": a short price & delivery block with one item per line, using emojis like 💰 🚚 💵 📩. Include price and delivery charge if given. If price is NOT given, write the price line with a blank placeholder like "মূল্য: ___ টাকা" (or "Price: ___ Tk" in English) so the seller can fill it in. Add a line for how to order. Mention cash on delivery only if the seller's payment methods include it, or if no payment methods were given.
 
 Return ONLY the JSON object, nothing else.`;
 }

@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, type GenerateContentResponse } from "@google/genai";
 import { NextResponse } from "next/server";
 import { buildPrompt } from "@/lib/prompt";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
-import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types";
+import type { GeneratedPost, Language, PaymentMethod, ProductDetails, ShopProfile, Tone } from "@/lib/types";
 
 // This code runs only on the server — the API key is never sent to the browser.
 export const runtime = "nodejs";
@@ -17,6 +17,26 @@ const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const LANGUAGES: Language[] = ["bn", "en", "mixed"];
 const TONES: Tone[] = ["simple", "premium", "offer", "friendly"];
+const PAYMENTS: PaymentMethod[] = ["bkash", "nagad", "rocket", "cod", "card"];
+
+// Reads the optional shop profile sent by the browser, keeping only safe, short values
+function parseShop(raw: FormDataEntryValue | null): ShopProfile | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const p = JSON.parse(raw);
+    const str = (v: unknown, max = 100) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+    return {
+      shopName: str(p.shopName),
+      phone: str(p.phone, 30),
+      deliveryInside: str(p.deliveryInside, 20),
+      deliveryOutside: str(p.deliveryOutside, 20),
+      payments: Array.isArray(p.payments) ? p.payments.filter((m: unknown) => PAYMENTS.includes(m as PaymentMethod)) : [],
+      pageLink: str(p.pageLink, 200),
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Models to try, in order. If one is busy (503) or not available, the next one is used.
 // Override with GEMINI_MODEL in .env.local / Vercel, e.g. "gemini-flash-lite-latest,gemini-flash-latest"
@@ -72,6 +92,9 @@ function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+// Models that don't accept "thinking off" — remembered so we don't waste a call next time
+const noThinkingModels = new Set<string>(MODELS.filter((m) => m.includes("lite")));
+
 type GenerateArgs = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
 
 /**
@@ -86,6 +109,9 @@ async function callModel(
   timeoutMs: number,
 ): Promise<GenerateContentResponse> {
   const started = Date.now();
+  if (noThinkingModels.has(model)) {
+    return withTimeout(ai.models.generateContent({ model, contents, config }), timeoutMs);
+  }
   try {
     return await withTimeout(
       ai.models.generateContent({ model, contents, config: { ...config, thinkingConfig: { thinkingBudget: 0 } } }),
@@ -96,6 +122,7 @@ async function callModel(
     // Some models reject "thinking off" with a generic 400 "invalid argument" — retry without it
     if (msg === "AI_TIMEOUT" || !(/thinking|budget/i.test(msg) || isBadRequest(msg))) throw e;
     console.warn(`[PostKori] ${model} rejected thinkingConfig, retrying without it`);
+    noThinkingModels.add(model);
     return withTimeout(ai.models.generateContent({ model, contents, config }), timeoutMs - (Date.now() - started));
   }
 }
@@ -196,7 +223,7 @@ export async function POST(req: Request) {
         role: "user",
         parts: [
           { inlineData: { mimeType: image.type, data: base64 } },
-          { text: buildPrompt(details, language, tone) },
+          { text: buildPrompt(details, language, tone, parseShop(form.get("shop"))) },
         ],
       },
     ];

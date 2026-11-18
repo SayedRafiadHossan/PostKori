@@ -33,6 +33,7 @@ Each one can be copied with one tap, or all of them at once, and pasted straight
 - ⚡ **Photos are compressed in the browser** before upload (5MB → ~300KB), so it's fast on mobile data
 - 🔒 **API key stays on the server.** The browser only talks to our own API route.
 - 🛡️ **Rate limiting** per visitor to protect the free AI quota
+- 🏪 **Shop profile** saved on the device and added to every post automatically (name, phone, delivery, bKash/Nagad/COD, page link)
 - 🔄 Regenerate, copy-all, Bangla error messages, loading states and social share image
 
 ## Tech stack
@@ -100,7 +101,7 @@ Open http://localhost:3000. Get a free Gemini API key at [Google AI Studio](http
 - [x] Photo → caption, description, hashtags, price post
 - [x] Bangla / English / Banglish + 4 tones
 - [x] Image compression, rate limiting, share image
-- [ ] Save shop profile (name, phone, delivery charges) and auto-add to every post
+- [x] Save shop profile (name, phone, delivery, payments, page link) and auto-add to every post
 - [ ] Post history with login
 - [ ] Festival templates (Eid, Puja, Boishakh offers)
 - [ ] Price tag / text overlay on the product photo

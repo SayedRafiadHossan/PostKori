@@ -7,8 +7,17 @@ import UploadBox from "./UploadBox";
 import DetailsForm from "./DetailsForm";
 import OptionPicker, { type Option } from "./OptionPicker";
 import ResultCard, { copyText } from "./ResultCard";
+import ShopProfileCard from "./ShopProfile";
 import { compressImage } from "@/lib/compressImage";
-import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types";
+import {
+  clearShopProfile,
+  deliveryText,
+  emptyShopProfile,
+  isProfileSet,
+  loadShopProfile,
+  saveShopProfile,
+} from "@/lib/shopProfile";
+import type { GeneratedPost, Language, ProductDetails, ShopProfile, Tone } from "@/lib/types";
 
 const languageOptions: Option<Language>[] = [
   { value: "bn", label: "বাংলা" },
@@ -47,6 +56,28 @@ export default function PostKoriApp() {
   const [copiedAll, setCopiedAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
+  const [shop, setShop] = useState<ShopProfile>(emptyShopProfile);
+
+  // Load the saved shop profile from this browser (once, after the page opens)
+  useEffect(() => {
+    const saved = loadShopProfile();
+    setShop(saved);
+    const delivery = deliveryText(saved);
+    if (delivery) setDetails((d) => (d.deliveryCharge ? d : { ...d, deliveryCharge: delivery }));
+  }, []);
+
+  function handleSaveShop(profile: ShopProfile) {
+    saveShopProfile(profile);
+    setShop(profile);
+    // Fill the delivery charge from the profile if the seller hasn't typed one
+    const delivery = deliveryText(profile);
+    if (delivery) setDetails((d) => (d.deliveryCharge ? d : { ...d, deliveryCharge: delivery }));
+  }
+
+  function handleClearShop() {
+    clearShopProfile();
+    setShop(emptyShopProfile);
+  }
 
   // Rotate the loading message every 1.6 seconds
   useEffect(() => {
@@ -78,6 +109,7 @@ export default function PostKoriApp() {
       form.append("price", details.price);
       form.append("details", details.details);
       form.append("deliveryCharge", details.deliveryCharge);
+      if (isProfileSet(shop)) form.append("shop", JSON.stringify(shop));
 
       const res = await fetch("/api/generate", { method: "POST", body: form });
       const data = await res.json().catch(() => ({}));
@@ -112,49 +144,53 @@ export default function PostKoriApp() {
       <Header />
 
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-2 lg:items-start">
-        {/* ---------- Left: inputs ---------- */}
-        <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div>
-            <h1 className="text-xl font-bold">নতুন পোস্ট তৈরি করুন</h1>
-            <p className="text-sm text-muted">ছবি দিন, কয়েকটি তথ্য দিন — বাকিটা PostKori করবে।</p>
-          </div>
+        {/* ---------- Left: shop profile + inputs ---------- */}
+        <div className="space-y-4">
+          <ShopProfileCard profile={shop} onSave={handleSaveShop} onClear={handleClearShop} />
 
-          <UploadBox
-            file={file}
-            onChange={(f) => {
-              setFile(f);
-              setResult(null);
-              setError(null);
-            }}
-          />
+          <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <h1 className="text-xl font-bold">নতুন পোস্ট তৈরি করুন</h1>
+              <p className="text-sm text-muted">ছবি দিন, কয়েকটি তথ্য দিন — বাকিটা PostKori করবে।</p>
+            </div>
 
-          <DetailsForm value={details} onChange={setDetails} />
+            <UploadBox
+              file={file}
+              onChange={(f) => {
+                setFile(f);
+                setResult(null);
+                setError(null);
+              }}
+            />
 
-          <OptionPicker label="ভাষা" options={languageOptions} value={language} onChange={setLanguage} />
+            <DetailsForm value={details} onChange={setDetails} />
 
-          <OptionPicker label="পোস্টের ধরন" options={toneOptions} value={tone} onChange={setTone} />
+            <OptionPicker label="ভাষা" options={languageOptions} value={language} onChange={setLanguage} />
 
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={!file || loading}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-500 px-4 py-3.5 text-lg font-semibold text-white shadow-md transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-          >
-            {loading ? (
-              <>
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                {loadingSteps[loadingStep]}
-              </>
-            ) : result ? (
-              <>🔄 নতুন অপশনে আবার তৈরি করুন</>
-            ) : (
-              <>✨ পোস্ট তৈরি করুন</>
-            )}
-          </button>
+            <OptionPicker label="পোস্টের ধরন" options={toneOptions} value={tone} onChange={setTone} />
 
-          {error && <p className="-mt-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">⚠️ {error}</p>}
-          {!file && <p className="-mt-3 text-center text-xs text-muted">শুরু করতে আগে একটি ছবি আপলোড করুন</p>}
-        </section>
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={!file || loading}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-500 px-4 py-3.5 text-lg font-semibold text-white shadow-md transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            >
+              {loading ? (
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  {loadingSteps[loadingStep]}
+                </>
+              ) : result ? (
+                <>🔄 নতুন অপশনে আবার তৈরি করুন</>
+              ) : (
+                <>✨ পোস্ট তৈরি করুন</>
+              )}
+            </button>
+
+            {error && <p className="-mt-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">⚠️ {error}</p>}
+            {!file && <p className="-mt-3 text-center text-xs text-muted">শুরু করতে আগে একটি ছবি আপলোড করুন</p>}
+          </section>
+        </div>
 
         {/* ---------- Right: results ---------- */}
         <section ref={resultsRef} className="scroll-mt-20 space-y-4" aria-live="polite">
