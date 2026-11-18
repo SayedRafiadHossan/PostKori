@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* PostKori brand tokens */
+@theme {
+  --font-sans: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-500: #2f6bff;
+  --color-brand-600: #1f55e6;
+  --color-brand-700: #1a44b8;
+
+  --color-accent-500: #ff7a1a; /* warm orange for offers / CTAs */
+
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+}
+
+html,
+body {
+  background: #f8fafc;
+  color: var(--color-ink);
+}
+
+/* Bangla text needs a little more line height to stay readable */
+body {
+  line-height: 1.65;
+}
