@@ -8,17 +8,22 @@ import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types"
 export const runtime = "nodejs";
 export const maxDuration = 60; // max allowed on Vercel Hobby plan
 
-// Stop waiting for Gemini after 50s so we can send a friendly message before Vercel cuts us off at 60s
+// Total time we spend trying Gemini (stays safely under Vercel's 60s limit)
 const AI_TIMEOUT_MS = 50_000;
+// Max time for one single model call, so there is time left to try a backup model
+const PER_CALL_TIMEOUT_MS = 25_000;
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const LANGUAGES: Language[] = ["bn", "en", "mixed"];
 const TONES: Tone[] = ["simple", "premium", "offer", "friendly"];
 
-// "gemini-flash-latest" always points to Google's newest Flash model.
-// You can pin a specific model by setting GEMINI_MODEL in .env.local.
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+// Models to try, in order. If one is busy (503) or not available, the next one is used.
+// Override with GEMINI_MODEL in .env.local / Vercel, e.g. "gemini-flash-lite-latest,gemini-flash-latest"
+const MODELS = (process.env.GEMINI_MODEL || "gemini-flash-latest,gemini-flash-lite-latest,gemini-2.5-flash")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 // Tells Gemini the exact JSON shape we want back
 const responseSchema = {
@@ -32,6 +37,17 @@ const responseSchema = {
   required: ["description", "caption", "hashtags", "pricePost"],
   propertyOrdering: ["description", "caption", "hashtags", "pricePost"],
 };
+
+// ---------- small helpers ----------
+
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Google is overloaded or our single call took too long → try again / next model
+const isBusy = (msg: string) =>
+  msg === "AI_TIMEOUT" || /\b(500|503)\b|UNAVAILABLE|high demand|overloaded|INTERNAL/i.test(msg);
+// This model name doesn't exist for this key → skip to next model
+const isMissingModel = (msg: string) => /\b404\b|NOT_FOUND|not found|is not supported/i.test(msg);
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -53,10 +69,85 @@ function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+type GenerateArgs = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
+
+/**
+ * Calls one model. Newer Gemini models "think" before answering, which is slow and not
+ * needed for captions — so we turn thinking off. If a model rejects that setting, retry without it.
+ */
+async function callModel(
+  ai: GoogleGenAI,
+  model: string,
+  contents: GenerateArgs["contents"],
+  config: NonNullable<GenerateArgs["config"]>,
+  timeoutMs: number,
+): Promise<GenerateContentResponse> {
+  const started = Date.now();
+  try {
+    return await withTimeout(
+      ai.models.generateContent({ model, contents, config: { ...config, thinkingConfig: { thinkingBudget: 0 } } }),
+      timeoutMs,
+    );
+  } catch (e) {
+    const msg = errMsg(e);
+    if (msg === "AI_TIMEOUT" || !/thinking|budget/i.test(msg)) throw e;
+    console.warn(`[PostKori] ${model} rejected thinkingConfig, retrying without it`);
+    return withTimeout(ai.models.generateContent({ model, contents, config }), timeoutMs - (Date.now() - started));
+  }
+}
+
+/** Tries each model in MODELS until one answers, within the overall time budget. */
+async function generateWithFallback(
+  ai: GoogleGenAI,
+  contents: GenerateArgs["contents"],
+  config: NonNullable<GenerateArgs["config"]>,
+): Promise<{ response: GenerateContentResponse; model: string }> {
+  const deadline = Date.now() + AI_TIMEOUT_MS;
+  let lastError: unknown = new Error("AI_TIMEOUT");
+
+  for (const [index, model] of MODELS.entries()) {
+    // The first (main) model gets one quick retry, since demand spikes often clear in seconds
+    const attempts = index === 0 ? 2 : 1;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const msLeft = deadline - Date.now();
+      if (msLeft < 3_000) throw lastError;
+
+      try {
+        const response = await callModel(ai, model, contents, config, Math.min(msLeft, PER_CALL_TIMEOUT_MS));
+        return { response, model };
+      } catch (e) {
+        lastError = e;
+        const msg = errMsg(e);
+
+        if (isBusy(msg)) {
+          console.warn(`[PostKori] ${model} busy/slow (attempt ${attempt}): ${msg.slice(0, 120)}`);
+          if (attempt < attempts) await sleep(1_000);
+          continue;
+        }
+        if (isMissingModel(msg)) {
+          console.warn(`[PostKori] ${model} not available, trying next model`);
+          break;
+        }
+        throw e; // e.g. bad API key — no point trying other models
+      }
+    }
+  }
+  throw lastError;
+}
+
+// ---------- the API route ----------
+
 export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return error("Server is missing GEMINI_API_KEY. Add it to .env.local and restart the dev server.", 500);
+    const dev = process.env.NODE_ENV !== "production";
+    return error(
+      dev
+        ? "Server is missing GEMINI_API_KEY. Add it to .env.local and restart the dev server."
+        : "সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।",
+      500,
+    );
   }
 
   // ---------- 0. Rate limit: max posts per visitor per hour ----------
@@ -104,35 +195,14 @@ export async function POST(req: Request) {
         ],
       },
     ];
-    const baseConfig = {
+
+    const started = Date.now();
+    const { response, model } = await generateWithFallback(ai, contents, {
       responseMimeType: "application/json",
       responseSchema,
       temperature: 0.9,
-    };
-
-    // Newer Gemini models "think" before answering, which is slow and not needed for captions.
-    // First try with thinking turned off; if this model doesn't support that setting, retry without it.
-    const started = Date.now();
-    let response: GenerateContentResponse;
-    try {
-      response = await withTimeout(
-        ai.models.generateContent({
-          model: MODEL,
-          contents,
-          config: { ...baseConfig, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-        AI_TIMEOUT_MS,
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg === "AI_TIMEOUT" || !/thinking|budget|INVALID_ARGUMENT/i.test(msg)) throw e;
-      console.warn("[PostKori] Model rejected thinkingConfig, retrying without it:", msg);
-      response = await withTimeout(
-        ai.models.generateContent({ model: MODEL, contents, config: baseConfig }),
-        AI_TIMEOUT_MS - (Date.now() - started),
-      );
-    }
-    console.log(`[PostKori] Gemini (${MODEL}) answered in ${Date.now() - started}ms`);
+    });
+    console.log(`[PostKori] answered by ${model} in ${Date.now() - started}ms`);
 
     // ---------- 3. Parse and return the result ----------
     const text = response.text;
@@ -144,15 +214,18 @@ export async function POST(req: Request) {
     return NextResponse.json(post);
   } catch (e) {
     console.error("[PostKori] Gemini error:", e);
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errMsg(e);
     if (msg === "AI_TIMEOUT") {
       return error("AI এর উত্তর দিতে দেরি হচ্ছে। একটু পরে আবার চেষ্টা করুন।", 504);
     }
-    if (msg.includes("429") || /quota|rate/i.test(msg)) {
+    if (isBusy(msg)) {
+      return error("AI সার্ভার এখন ব্যস্ত। ১-২ মিনিট পর আবার চেষ্টা করুন।", 503);
+    }
+    if (msg.includes("429") || /quota|RESOURCE_EXHAUSTED/i.test(msg)) {
       return error("এই মুহূর্তে অনেক রিকোয়েস্ট — এক মিনিট পর আবার চেষ্টা করুন।", 429);
     }
-    if (/API key|PERMISSION_DENIED|401|403/i.test(msg)) {
-      return error("Gemini API key কাজ করছে না। .env.local ফাইলের key চেক করুন।", 500);
+    if (/API key|PERMISSION_DENIED|\b401\b|\b403\b/i.test(msg)) {
+      return error("Gemini API key কাজ করছে না। Key চেক করুন।", 500);
     }
     return error("পোস্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।", 502);
   }
