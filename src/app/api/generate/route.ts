@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, type GenerateContentResponse } from "@google/genai";
 import { NextResponse } from "next/server";
 import { buildPrompt } from "@/lib/prompt";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
@@ -6,7 +6,10 @@ import type { GeneratedPost, Language, ProductDetails, Tone } from "@/lib/types"
 
 // This code runs only on the server — the API key is never sent to the browser.
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60; // max allowed on Vercel Hobby plan
+
+// Stop waiting for Gemini after 50s so we can send a friendly message before Vercel cuts us off at 60s
+const AI_TIMEOUT_MS = 50_000;
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -29,6 +32,22 @@ const responseSchema = {
   required: ["description", "caption", "hashtags", "pricePost"],
   propertyOrdering: ["description", "caption", "hashtags", "pricePost"],
 };
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("AI_TIMEOUT")), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
 
 function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -76,23 +95,44 @@ export async function POST(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
     const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
 
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { inlineData: { mimeType: image.type, data: base64 } },
-            { text: buildPrompt(details, language, tone) },
-          ],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema,
-        temperature: 0.9,
+    const contents = [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType: image.type, data: base64 } },
+          { text: buildPrompt(details, language, tone) },
+        ],
       },
-    });
+    ];
+    const baseConfig = {
+      responseMimeType: "application/json",
+      responseSchema,
+      temperature: 0.9,
+    };
+
+    // Newer Gemini models "think" before answering, which is slow and not needed for captions.
+    // First try with thinking turned off; if this model doesn't support that setting, retry without it.
+    const started = Date.now();
+    let response: GenerateContentResponse;
+    try {
+      response = await withTimeout(
+        ai.models.generateContent({
+          model: MODEL,
+          contents,
+          config: { ...baseConfig, thinkingConfig: { thinkingBudget: 0 } },
+        }),
+        AI_TIMEOUT_MS,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "AI_TIMEOUT" || !/thinking|budget|INVALID_ARGUMENT/i.test(msg)) throw e;
+      console.warn("[PostKori] Model rejected thinkingConfig, retrying without it:", msg);
+      response = await withTimeout(
+        ai.models.generateContent({ model: MODEL, contents, config: baseConfig }),
+        AI_TIMEOUT_MS - (Date.now() - started),
+      );
+    }
+    console.log(`[PostKori] Gemini (${MODEL}) answered in ${Date.now() - started}ms`);
 
     // ---------- 3. Parse and return the result ----------
     const text = response.text;
@@ -105,6 +145,9 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("[PostKori] Gemini error:", e);
     const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "AI_TIMEOUT") {
+      return error("AI এর উত্তর দিতে দেরি হচ্ছে। একটু পরে আবার চেষ্টা করুন।", 504);
+    }
     if (msg.includes("429") || /quota|rate/i.test(msg)) {
       return error("এই মুহূর্তে অনেক রিকোয়েস্ট — এক মিনিট পর আবার চেষ্টা করুন।", 429);
     }

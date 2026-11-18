@@ -26,6 +26,14 @@ const toneOptions: Option<Tone>[] = [
 // Messages that rotate while the AI is working
 const loadingSteps = ["ছবি দেখছি…", "পণ্যটি বুঝছি…", "ক্যাপশন লিখছি…", "হ্যাশট্যাগ বাছাই করছি…", "শেষ করছি…"];
 
+// Readable message when the server didn't send its own error (e.g. a timeout or crash page)
+function statusMessage(status: number): string {
+  if (status === 504) return "AI এর উত্তর দিতে দেরি হচ্ছে (timeout)। আবার চেষ্টা করুন।";
+  if (status === 413) return "ছবিটি অনেক বড়। ছোট একটি ছবি দিয়ে চেষ্টা করুন।";
+  if (status === 429) return "অনেক বেশি রিকোয়েস্ট। কিছুক্ষণ পর আবার চেষ্টা করুন।";
+  return `সার্ভারে সমস্যা হয়েছে (${status})। আবার চেষ্টা করুন।`;
+}
+
 const emptyDetails: ProductDetails = { name: "", price: "", details: "", deliveryCharge: "" };
 
 export default function PostKoriApp() {
@@ -73,7 +81,7 @@ export default function PostKoriApp() {
 
       const res = await fetch("/api/generate", { method: "POST", body: form });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      if (!res.ok) throw new Error(data.error || statusMessage(res.status));
 
       setResult(data as GeneratedPost);
     } catch (e) {
